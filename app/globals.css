@@ -1,0 +1,212 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F9FAFB;
+  --secondary-foreground: #000000;
+  --muted: #F9FAFB;
+  --muted-foreground: #6B7280;
+  --accent: #F9FAFB;
+  --accent-foreground: #000000;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #000000;
+  --input: #000000;
+  --ring: #000000;
+  --radius: 0;
+  
+  /* Legend Colors */
+  --buffett: #2563EB;
+  --munger: #7C3AED;
+  --burry: #DC2626;
+  --lynch: #059669;
+  --druckenmiller: #D97706;
+  --klarman: #0891B2;
+  --greenblatt: #4F46E5;
+  
+  /* Sentiment Colors */
+  --bullish: #059669;
+  --bearish: #DC2626;
+  --cautious: #D97706;
+  --neutral: #6B7280;
+  
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F9FAFB;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #000000;
+  --sidebar-ring: #000000;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --card: #1E293B;
+  --card-foreground: #F8FAFC;
+  --popover: #1E293B;
+  --popover-foreground: #F8FAFC;
+  --primary: #F8FAFC;
+  --primary-foreground: #0F172A;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #1E293B;
+  --accent-foreground: #F8FAFC;
+  --destructive: #DC2626;
+  --destructive-foreground: #F8FAFC;
+  --border: #334155;
+  --input: #334155;
+  --ring: #334155;
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #F8FAFC;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #334155;
+  --sidebar-ring: #334155;
+}
+
+@theme inline {
+  --font-sans: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Legend Colors */
+  --color-buffett: var(--buffett);
+  --color-munger: var(--munger);
+  --color-burry: var(--burry);
+  --color-lynch: var(--lynch);
+  --color-druckenmiller: var(--druckenmiller);
+  --color-klarman: var(--klarman);
+  --color-greenblatt: var(--greenblatt);
+  
+  /* Sentiment Colors */
+  --color-bullish: var(--bullish);
+  --color-bearish: var(--bearish);
+  --color-cautious: var(--cautious);
+  --color-neutral: var(--neutral);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Animations */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes speak {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.5); }
+}
+
+@keyframes gesture {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-15deg); }
+}
+
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 8px currentColor); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: currentColor; }
+  50% { border-color: transparent; }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.animate-speak {
+  animation: speak 0.3s ease-in-out infinite;
+}
+
+.animate-gesture {
+  animation: gesture 1s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
