@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // REAL DATA SNAPSHOT (Source: Latest 13F Filings available)
 // Note: 13F filings are released 45 days after quarter end.
@@ -163,8 +163,8 @@ export function GuruPortfolio() {
                         key={guru.id}
                         onClick={() => { setSelectedGuru(guru); setAnalysis(''); }}
                         className={`w-full text-left p-3 border-2 transition-all flex items-center gap-3 ${selectedGuru.id === guru.id
-                                ? 'border-foreground bg-foreground text-background'
-                                : 'border-transparent hover:border-foreground/20'
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-transparent hover:border-foreground/20'
                             }`}
                     >
                         <span className="text-xl">{guru.avatar}</span>
@@ -187,8 +187,8 @@ export function GuruPortfolio() {
                             <div className="flex items-center gap-2">
                                 <h2 className="text-3xl font-bold">{selectedGuru.name}</h2>
                                 <span className={`text-xs font-bold px-2 py-0.5 rounded text-background ${selectedGuru.sentiment.includes('BULL') ? 'bg-[#10B981]'
-                                        : selectedGuru.sentiment.includes('BEAR') ? 'bg-[#EF4444]'
-                                            : 'bg-foreground'
+                                    : selectedGuru.sentiment.includes('BEAR') ? 'bg-[#EF4444]'
+                                        : 'bg-foreground'
                                     }`}>
                                     {selectedGuru.sentiment}
                                 </span>
@@ -204,8 +204,8 @@ export function GuruPortfolio() {
                         {selectedGuru.recentMoves.map((move, i) => (
                             <div key={i} className="text-sm flex items-center justify-end gap-2 mb-1">
                                 <span className={`px-1.5 py-0.5 text-[10px] font-bold text-white min-w-[40px] text-center ${move.action === 'BUY' ? 'bg-[#10B981]'
-                                        : move.action === 'SELL' ? 'bg-[#EF4444]'
-                                            : 'bg-[#F59E0B]'
+                                    : move.action === 'SELL' ? 'bg-[#EF4444]'
+                                        : 'bg-[#F59E0B]'
                                     }`}>
                                     {move.action}
                                 </span>
@@ -271,8 +271,8 @@ export function GuruPortfolio() {
                                     </td>
                                     <td className="py-3 text-center">
                                         <span className={`text-xs font-bold px-2 py-1 rounded ${stock.change.includes('-') ? 'bg-red-100 text-red-700'
-                                                : stock.change === '0%' ? 'bg-gray-100 text-gray-500'
-                                                    : 'bg-green-100 text-green-700'
+                                            : stock.change === '0%' ? 'bg-gray-100 text-gray-500'
+                                                : 'bg-green-100 text-green-700'
                                             }`}>
                                             {stock.change}
                                         </span>
