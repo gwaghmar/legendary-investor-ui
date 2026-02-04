@@ -8,6 +8,7 @@ create table public.profiles (
   username text,
   full_name text,
   avatar_url text,
+  role text default 'user',
   updated_at timestamp with time zone,
   
   constraint username_length check (char_length(username) >= 3)
@@ -29,6 +30,10 @@ create policy "Users can update own profile."
   on profiles for update
   using ( auth.uid() = id );
 
+create policy "Admins can view all profiles"
+  on profiles for select
+  using ( (select role from public.profiles where id = auth.uid()) = 'super_user' );
+
 -- PORTFOLIOS TABLE
 create table public.portfolios (
   id uuid default uuid_generate_v4() primary key,
@@ -45,7 +50,7 @@ alter table public.portfolios enable row level security;
 
 create policy "Users can view own portfolio."
   on portfolios for select
-  using ( auth.uid() = user_id );
+  using ( (auth.uid() = user_id) or (exists (select 1 from public.profiles where id = auth.uid() and role = 'super_user')) );
 
 create policy "Users can insert own portfolio."
   on portfolios for insert
@@ -67,7 +72,7 @@ alter table public.watchlists enable row level security;
 
 create policy "Users can view own watchlist."
   on watchlists for select
-  using ( auth.uid() = user_id );
+  using ( (auth.uid() = user_id) or (exists (select 1 from public.profiles where id = auth.uid() and role = 'super_user')) );
 
 create policy "Users can insert into own watchlist."
   on watchlists for insert
