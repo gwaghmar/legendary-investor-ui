@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { COUNCIL_AGENTS, CouncilAgent, AgentVote, Vote, calculateConsensus, CouncilDecision } from '@/lib/council-agents';
+import { COUNCIL_AGENTS, CouncilAgent, AgentVote, calculateConsensus, CouncilDecision } from '@/lib/council-agents';
 
 export const runtime = 'edge';
 
@@ -7,29 +7,42 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
 const SITE_NAME = process.env.SITE_NAME || 'Legendary Investor';
 
-async function getAgentVote(
-    agent: CouncilAgent,
+// Use a cheaper, faster model for batch processing
+const MODEL = 'google/gemini-2.0-flash-001';
+
+async function getCouncilVotes(
     symbol: string,
     question: string,
+    activeAgents: CouncilAgent[],
     context?: string
-): Promise<AgentVote> {
-    const prompt = `${agent.systemPrompt}
+): Promise<AgentVote[]> {
+    const agentsDesc = activeAgents.map(a =>
+        `- ${a.name} (${a.title}): ${a.systemPrompt.slice(0, 100)}...`
+    ).join('\n');
 
-STOCK: ${symbol}
-QUESTION: ${question}
-${context ? `\nCONTEXT:\n${context}` : ''}
+    const prompt = `You are playing the role of an Investment Council composed of 5 legendary investors.
+    
+THE COUNCIL MEMBERS:
+${agentsDesc}
 
-Analyze this investment and provide your vote.
+TASK:
+Analyze the stock ${symbol} based on the question: "${question}".
+${context ? `CONTEXT:\n${context}` : ''}
 
-RESPOND IN THIS EXACT JSON FORMAT:
-{
-  "vote": "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL",
-  "confidence": 0-100,
-  "reasoning": "2-3 sentences max explaining your vote",
-  "keyMetrics": ["metric1", "metric2", "metric3"]
-}
+Each member must vote independently based on their specific philosophy.
 
-Be decisive. Give your honest assessment as the ${agent.title}.`;
+RESPOND ONLY WITH A JSON ARRAY containing an object for each council member.
+Format:
+[
+  {
+    "agentId": "value", // specific agent ID
+    "vote": "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL",
+    "confidence": 0-100,
+    "reasoning": "2 sentences max explaining the vote from their specific persona",
+    "keyMetrics": ["metric1", "metric2"]
+  },
+  ...
+]`;
 
     try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -41,42 +54,47 @@ Be decisive. Give your honest assessment as the ${agent.title}.`;
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'anthropic/claude-3.5-sonnet',
+                model: MODEL,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7,
-                max_tokens: 300,
+                response_format: { type: 'json_object' }
             }),
         });
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content || '';
 
-        // Parse JSON from response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        // Robust JSON parsing
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return {
-                agentId: agent.id,
-                agentName: agent.name,
-                vote: parsed.vote || 'HOLD',
-                confidence: Math.min(100, Math.max(0, parsed.confidence || 50)),
-                reasoning: parsed.reasoning || 'No reasoning provided',
-                keyMetrics: parsed.keyMetrics || [],
-            };
+            const parsedVotes = JSON.parse(jsonMatch[0]);
+
+            // Map back to ensure correct structure
+            return parsedVotes.map((v: any) => {
+                const agent = activeAgents.find(a => a.id === v.agentId) || activeAgents[0];
+                return {
+                    agentId: agent.id,
+                    agentName: agent.name,
+                    vote: v.vote || 'HOLD',
+                    confidence: Math.min(100, Math.max(0, v.confidence || 50)),
+                    reasoning: v.reasoning || 'Analysis inconclusive.',
+                    keyMetrics: v.keyMetrics || [],
+                };
+            });
         }
     } catch (error) {
-        console.error(`Agent ${agent.id} voting error:`, error);
+        console.error('Council batch voting error:', error);
     }
 
-    // Fallback vote if parsing fails
-    return {
+    // Fallback if API fails
+    return activeAgents.map(agent => ({
         agentId: agent.id,
         agentName: agent.name,
         vote: 'HOLD',
         confidence: 50,
-        reasoning: 'Analysis inconclusive.',
+        reasoning: 'Council currently unavailable.',
         keyMetrics: [],
-    };
+    }));
 }
 
 export async function POST(req: Request) {
@@ -94,9 +112,8 @@ export async function POST(req: Request) {
         // Filter to requested agents
         const activeAgents = COUNCIL_AGENTS.filter(a => agents.includes(a.id));
 
-        // Get votes from all agents in parallel
-        const votePromises = activeAgents.map(agent => getAgentVote(agent, symbol, question, context));
-        const votes = await Promise.all(votePromises);
+        // BATCH REQUEST: 1 Call instead of 5
+        const votes = await getCouncilVotes(symbol, question, activeAgents, context);
 
         // Calculate consensus
         const { consensus, strength } = calculateConsensus(votes);
@@ -130,27 +147,4 @@ export async function POST(req: Request) {
         console.error('Council API Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
-
-// GET: List available council agents
-export async function GET() {
-    return NextResponse.json({
-        agents: COUNCIL_AGENTS.map(a => ({
-            id: a.id,
-            name: a.name,
-            title: a.title,
-            specialty: a.specialty,
-            avatar: a.avatar,
-            color: a.color,
-        })),
-        usage: {
-            endpoint: 'POST /api/council',
-            body: {
-                symbol: 'AAPL',
-                question: 'Should I buy Apple stock for long-term holding?',
-                agents: ['value', 'growth', 'risk', 'macro', 'quant'],
-                context: 'Optional additional context about the investment',
-            },
-        },
-    });
 }

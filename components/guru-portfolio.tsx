@@ -10,7 +10,7 @@ const GURUS = [
         id: 'buffett',
         name: 'Warren Buffett',
         firm: 'Berkshire Hathaway',
-        avatar: '🧓',
+        avatar: '/avatars/buffett.png',
         color: '#10B981',
         sentiment: 'CAUTIOUS',
         cash: '$189B', // Historic high cash pile
@@ -32,7 +32,7 @@ const GURUS = [
         id: 'burry',
         name: 'Michael Burry',
         firm: 'Scion Asset Mgmt',
-        avatar: '🔍',
+        avatar: '/avatars/burry.png',
         color: '#EF4444',
         sentiment: 'BEARISH',
         cash: '45%',
@@ -53,7 +53,7 @@ const GURUS = [
         id: 'druckenmiller',
         name: 'Stan Druckenmiller',
         firm: 'Duquesne Family',
-        avatar: '🌍',
+        avatar: '/avatars/druckenmiller.png',
         color: '#F59E0B',
         sentiment: 'BULLISH TECH',
         cash: '15%',
@@ -74,7 +74,7 @@ const GURUS = [
         id: 'ackman',
         name: 'Bill Ackman',
         firm: 'Pershing Square',
-        avatar: '👔',
+        avatar: '/avatars/ackman.png',
         color: '#3B82F6',
         sentiment: 'CONCENTRATED',
         cash: '5%',
@@ -94,7 +94,7 @@ const GURUS = [
         id: 'dalio',
         name: 'Ray Dalio',
         firm: 'Bridgewater',
-        avatar: '🌊',
+        avatar: '/avatars/dalio.png',
         color: '#8B5CF6',
         sentiment: 'DIVERSIFIED',
         cash: '10%',
@@ -167,7 +167,9 @@ export function GuruPortfolio() {
                             : 'border-transparent hover:border-foreground/20'
                             }`}
                     >
-                        <span className="text-xl">{guru.avatar}</span>
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 flex-shrink-0" style={{ borderColor: guru.color }}>
+                            <img src={guru.avatar} alt={guru.name} className="w-full h-full object-cover" />
+                        </div>
                         <div>
                             <div className="font-bold text-sm">{guru.name}</div>
                             <div className={`text-xs ${selectedGuru.id === guru.id ? 'opacity-80' : 'text-muted-foreground'}`}>
@@ -182,7 +184,9 @@ export function GuruPortfolio() {
             <div className="md:col-span-3 border-2 border-foreground p-6">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
-                        <div className="text-5xl">{selectedGuru.avatar}</div>
+                        <div className="w-16 h-16 rounded-full overflow-hidden border-3" style={{ borderColor: selectedGuru.color }}>
+                            <img src={selectedGuru.avatar} alt={selectedGuru.name} className="w-full h-full object-cover" />
+                        </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-3xl font-bold">{selectedGuru.name}</h2>
@@ -194,7 +198,7 @@ export function GuruPortfolio() {
                                 </span>
                             </div>
                             <div className="text-muted-foreground font-mono mt-1 text-sm">
-                                Cash Pile: {selectedGuru.cash} • Source: SEC 13F
+                                Cash Pile: {selectedGuru.cash} • Source: SEC 13F (Snapshot Q4 '24)
                             </div>
                         </div>
                     </div>
@@ -225,7 +229,10 @@ export function GuruPortfolio() {
                             className="bg-secondary/10 border-l-4 border-indigo-500 p-4 mb-6"
                         >
                             <h4 className="font-bold text-indigo-500 text-sm mb-1 flex items-center gap-2">
-                                <span>🤖</span> AI Strategy Breakdown
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                AI Strategy Breakdown
                             </h4>
                             <p className="text-sm italic leading-relaxed">{analysis}</p>
                         </motion.div>
@@ -292,7 +299,11 @@ export function GuruPortfolio() {
                     >
                         <span className="relative z-10 flex items-center gap-2">
                             {analyzing ? 'Reading Strategy...' : 'Analyze Strategy with AI'}
-                            {!analyzing && <span className="text-xl group-hover:rotate-12 transition-transform">✨</span>}
+                            {!analyzing && (
+                                <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
+                                </svg>
+                            )}
                         </span>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                     </button>

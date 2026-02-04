@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPineconeIndex } from '@/lib/pinecone';
+import { getStockData, formatStockContext } from '@/lib/finnhub';
 
 export const runtime = 'nodejs'; // Use Node runtime for Pinecone
 
@@ -44,6 +45,22 @@ export async function POST(req: Request) {
 
         const persona = PERSONALITIES[activeLegend] || 'You are a legendary investor with strong opinions.';
 
+        // FETCH REAL-TIME STOCK DATA
+        let stockContext = '';
+        try {
+            // Extract stock symbol from topic (e.g., "AAPL", "Apple stock", "$TSLA")
+            const symbolMatch = topic.match(/\$?([A-Z]{1,5})(?:\s|$)/i) ||
+                topic.match(/(?:stock|shares?|ticker)\s*:?\s*([A-Z]{1,5})/i);
+
+            if (symbolMatch) {
+                const symbol = symbolMatch[1].toUpperCase();
+                const stockData = await getStockData(symbol);
+                stockContext = formatStockContext(stockData);
+            }
+        } catch (e) {
+            console.warn('Stock data fetch failed:', e);
+        }
+
         // RAG SEARCH
         let ragContext = '';
         try {
@@ -67,21 +84,24 @@ export async function POST(req: Request) {
             // Continue without RAG if Pinecone fails (e.g. invalid key)
         }
 
-        // Simple, effective prompt with RAG context
+        // Simple, effective prompt with LIVE STOCK DATA + RAG context
         const systemPrompt = `${persona}
 
 TOPIC: "${topic}"
 ${userMessage ? `\nUSER ASKS: "${userMessage}"` : ''}
-${ragContext ? `\nFACTUAL CONTEXT (Use this if relevant!):\n${ragContext}` : ''}
+${stockContext ? `\n📊 LIVE MARKET DATA (as of now!):\n${stockContext}` : ''}
+${ragContext ? `\nFACTUAL CONTEXT:\n${ragContext}` : ''}
 
 RULES:
 1. Reply in 1-2 SHORT sentences max (under 150 characters!)
 2. Sound like YOU - use your personality and catchphrases
 3. Give your actual opinion (bullish/bearish/neutral) - be decisive!
-4. NO links, NO URLs, NO sources
-5. NO emojis at the start of sentences
-6. React to what the user asked if there's a question
-7. Be entertaining and memorable!
+4. Reference the REAL numbers from live data if available (price, P/E, margins, etc.)
+5. NO links, NO URLs, NO sources, NO website mentions
+6. NO emojis at the start of sentences
+7. React to what the user asked if there's a question
+8. Be entertaining and memorable!
+9. NEVER mention "Legendary Investor", "website", "site", or any platform name
 
 Just give your quick take. No intro, no "I think" - just say it.`;
 
@@ -107,10 +127,10 @@ Just give your quick take. No intro, no "I think" - just say it.`;
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'anthropic/claude-3.5-sonnet',
+                model: 'google/gemini-2.0-flash-001',
                 messages,
                 temperature: 0.9, // More creative/fun
-                max_tokens: 100, // Keep it SHORT
+                max_tokens: 150, // Keep it SHORT
             }),
         });
 
@@ -120,7 +140,18 @@ Just give your quick take. No intro, no "I think" - just say it.`;
             throw new Error(data.error.message);
         }
 
-        const content = data.choices[0].message.content;
+        const rawContent = data.choices[0].message.content;
+
+        // Clean any website/URL mentions that slip through
+        const content = rawContent
+            .replace(/legendary\s*investor/gi, '')
+            .replace(/https?:\/\/[^\s]+/gi, '')
+            .replace(/www\.[^\s]+/gi, '')
+            .replace(/\bwebsite\b/gi, '')
+            .replace(/\bsite\b/gi, '')
+            .replace(/localhost:[0-9]+/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
 
         // Simple verdict detection
         let verdict: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';

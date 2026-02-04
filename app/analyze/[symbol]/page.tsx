@@ -127,14 +127,15 @@ export default function StockAnalysisPage({
                   <button
                     key={legendId}
                     onClick={() => setSelectedLegend(legendId)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${
-                      isSelected
+                    className={`flex items-center gap-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${isSelected
                         ? 'border-current bg-secondary'
                         : 'border-transparent hover:bg-secondary/50'
-                    }`}
+                      }`}
                     style={{ borderColor: isSelected ? legend.color : 'transparent' }}
                   >
-                    <span>{legend.emoji}</span>
+                    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                      <img src={legend.avatar} alt="" className="w-full h-full object-cover" />
+                    </div>
                     <span className={isSelected ? 'font-bold' : ''}>{legend.name}</span>
                     {isFavorite && <span className="text-xs">*</span>}
                     {analysis && (
@@ -290,7 +291,9 @@ export default function StockAnalysisPage({
                 const legend = legends[analysis.legendId];
                 return (
                   <div key={analysis.legendId} className="flex items-center gap-2 text-sm">
-                    <span>{legend.emoji}</span>
+                    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                      <img src={legend.avatar} alt="" className="w-full h-full object-cover" />
+                    </div>
                     <span>{legend.name}:</span>
                     <span style={{ color: verdictColors[analysis.verdict] }}>
                       {analysis.verdict} ({analysis.conviction})

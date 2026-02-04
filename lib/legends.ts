@@ -7,7 +7,7 @@ export interface Legend {
   name: string;
   fullName: string;
   color: string;
-  emoji: string;
+  avatar: string;
   catchphrase: string;
   framework: string;
 }
@@ -17,8 +17,8 @@ export const legends: Record<LegendId, Legend> = {
     id: 'buffett',
     name: 'Buffett',
     fullName: 'Warren Buffett',
-    color: '#2563EB',
-    emoji: '👴',
+    color: '#10B981',
+    avatar: '/avatars/buffett.png',
     catchphrase: "Be fearful when others are greedy, and greedy when others are fearful.",
     framework: 'Quality Value Investing',
   },
@@ -27,7 +27,7 @@ export const legends: Record<LegendId, Legend> = {
     name: 'Munger',
     fullName: 'Charlie Munger',
     color: '#7C3AED',
-    emoji: '🧓',
+    avatar: '/avatars/munger.png',
     catchphrase: "Invert, always invert.",
     framework: 'Mental Models',
   },
@@ -35,8 +35,8 @@ export const legends: Record<LegendId, Legend> = {
     id: 'burry',
     name: 'Burry',
     fullName: 'Michael Burry',
-    color: '#DC2626',
-    emoji: '🔍',
+    color: '#EF4444',
+    avatar: '/avatars/burry.png',
     catchphrase: "I focus on value, not popularity.",
     framework: 'Deep Value & Contrarian',
   },
@@ -44,8 +44,8 @@ export const legends: Record<LegendId, Legend> = {
     id: 'lynch',
     name: 'Lynch',
     fullName: 'Peter Lynch',
-    color: '#059669',
-    emoji: '🛒',
+    color: '#3B82F6',
+    avatar: '/avatars/lynch.png',
     catchphrase: "Invest in what you know.",
     framework: 'GARP (Growth at Reasonable Price)',
   },
@@ -53,8 +53,8 @@ export const legends: Record<LegendId, Legend> = {
     id: 'druckenmiller',
     name: 'Druckenmiller',
     fullName: 'Stan Druckenmiller',
-    color: '#D97706',
-    emoji: '📈',
+    color: '#F59E0B',
+    avatar: '/avatars/druckenmiller.png',
     catchphrase: "It's not whether you're right or wrong, it's how much you make when you're right.",
     framework: 'Macro & Momentum',
   },
@@ -63,7 +63,7 @@ export const legends: Record<LegendId, Legend> = {
     name: 'Klarman',
     fullName: 'Seth Klarman',
     color: '#0891B2',
-    emoji: '🛡️',
+    avatar: '/avatars/klarman.png',
     catchphrase: "Margin of safety is the difference between price and value.",
     framework: 'Margin of Safety',
   },
@@ -71,8 +71,8 @@ export const legends: Record<LegendId, Legend> = {
     id: 'greenblatt',
     name: 'Greenblatt',
     fullName: 'Joel Greenblatt',
-    color: '#4F46E5',
-    emoji: '✨',
+    color: '#8B5CF6',
+    avatar: '/avatars/greenblatt.png',
     catchphrase: "Buy good companies at bargain prices.",
     framework: 'Magic Formula',
   },

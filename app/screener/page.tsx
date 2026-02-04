@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { StockAutocomplete } from '@/components/stock-autocomplete';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -417,24 +418,26 @@ export default function ScreenerPage() {
           )}
 
           {/* Search Input */}
-          <div className="mb-6">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="🔍 Search by symbol or company name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border-2 border-foreground bg-background px-4 py-3 text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_currentColor] placeholder:text-muted-foreground"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+          <div className="mb-6 relative">
+            <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <StockAutocomplete
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search by symbol or company name..."
+              inputClassName="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Frameworks */}
@@ -456,7 +459,18 @@ export default function ScreenerPage() {
                       color: isSelected ? 'white' : framework.color,
                     }}
                   >
-                    {isSelected ? '✓' : '○'} {framework.label}
+                    <span className="inline-flex items-center gap-1.5">
+                      {isSelected ? (
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                        </svg>
+                      )}
+                      {framework.label}
+                    </span>
                   </button>
                 );
               })}
@@ -656,7 +670,10 @@ export default function ScreenerPage() {
               }}
               className="text-sm border-2 border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors"
             >
-              📥 Export CSV
+              <svg className="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export CSV
             </button>
             <button
               onClick={() => {
@@ -667,7 +684,10 @@ export default function ScreenerPage() {
               }}
               className="text-sm border-2 border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors"
             >
-              💾 Save Screen
+              <svg className="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              Save Screen
             </button>
           </div>
         </div>

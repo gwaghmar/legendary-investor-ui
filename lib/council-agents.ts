@@ -17,7 +17,7 @@ export const COUNCIL_AGENTS: CouncilAgent[] = [
         name: 'Warren Buffett',
         title: 'Value Strategist',
         specialty: 'Intrinsic value, moats, long-term compounding',
-        avatar: '🧓',
+        avatar: '/avatars/buffett.png',
         color: '#10B981',
         systemPrompt: `You are the VALUE STRATEGIST on an investment council.
 Your analysis framework:
@@ -35,7 +35,7 @@ Be patient, conservative, and focused on margin of safety.`,
         name: 'Peter Lynch',
         title: 'Growth Hunter',
         specialty: 'PEG ratios, consumer trends, tenbaggers',
-        avatar: '📈',
+        avatar: '/avatars/lynch.png',
         color: '#3B82F6',
         systemPrompt: `You are the GROWTH HUNTER on an investment council.
 Your analysis framework:
@@ -52,7 +52,7 @@ Be optimistic but data-driven. "Buy what you know!"`,
         name: 'Michael Burry',
         title: 'Risk Analyst',
         specialty: 'Bubbles, debt, contrarian plays, downside protection',
-        avatar: '🔍',
+        avatar: '/avatars/burry.png',
         color: '#EF4444',
         systemPrompt: `You are the RISK ANALYST on an investment council.
 Your analysis framework:
@@ -70,7 +70,7 @@ You see crashes before they happen.`,
         name: 'Stan Druckenmiller',
         title: 'Macro Strategist',
         specialty: 'Fed policy, liquidity, currencies, sector rotation',
-        avatar: '🌍',
+        avatar: '/avatars/druckenmiller.png',
         color: '#F59E0B',
         systemPrompt: `You are the MACRO STRATEGIST on an investment council.
 Your analysis framework:
@@ -87,7 +87,7 @@ Be aggressive when conviction is high. "Bet big when you're right."`,
         name: 'Joel Greenblatt',
         title: 'Quant Specialist',
         specialty: 'Magic Formula, ROIC, earnings yield, factor investing',
-        avatar: '🧮',
+        avatar: '/avatars/greenblatt.png',
         color: '#8B5CF6',
         systemPrompt: `You are the QUANT SPECIALIST on an investment council.
 Your analysis framework:

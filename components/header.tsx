@@ -1,11 +1,38 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export function Header() {
   const pathname = usePathname();
-  const isHome = pathname === '/';
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
+    };
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.refresh();
+    router.push('/');
+  };
 
   return (
     <header className="bg-background border-b-2 border-foreground w-full">
@@ -19,43 +46,70 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-4">
+        <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/"
-            className="text-sm border-2 border-transparent px-3 py-1.5 hover:border-foreground transition-colors"
+            className="text-sm font-medium border-2 border-transparent px-3 py-2 hover:border-foreground hover:bg-foreground/5 transition-all hidden md:block"
           >
             Home
           </Link>
           <Link
             href="/screener"
-            className="text-sm border-2 border-transparent px-3 py-1.5 hover:border-foreground transition-colors"
+            className="text-sm font-medium border-2 border-transparent px-3 py-2 hover:border-foreground hover:bg-foreground/5 transition-all hidden md:block"
           >
             Screener
           </Link>
           <Link
             href="/council"
-            className="text-sm border-2 border-transparent px-3 py-1.5 hover:border-foreground transition-colors"
+            className="text-sm font-medium border-2 border-transparent px-3 py-2 hover:border-foreground hover:bg-foreground/5 transition-all"
           >
             Council
           </Link>
           <Link
             href="/data"
-            className="text-sm border-2 border-transparent px-3 py-1.5 hover:border-foreground transition-colors"
+            className="text-sm font-medium border-2 border-transparent px-3 py-2 hover:border-foreground hover:bg-foreground/5 transition-all"
           >
             Data
           </Link>
-          <Link
-            href="/portfolio"
-            className="text-sm border-2 border-transparent px-3 py-1.5 hover:border-foreground transition-colors"
-          >
-            Portfolio
-          </Link>
-          <Link
-            href="/dashboard"
-            className="text-sm bg-foreground text-background px-3 py-1.5 hover:bg-foreground/80 transition-colors"
-          >
-            Dashboard
-          </Link>
+
+          {/* Authenticated Routes */}
+          {user && (
+            <Link
+              href="/portfolio"
+              className="text-sm font-medium border-2 border-transparent px-3 py-2 hover:border-foreground hover:bg-foreground/5 transition-all"
+            >
+              Portfolio
+            </Link>
+          )}
+
+          {/* Auth State */}
+          {!loading && (
+            <>
+              {user ? (
+                <div className="flex items-center gap-2 ml-2">
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-bold bg-foreground text-background px-3 py-2 hover:bg-foreground/80 transition-all"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-sm font-bold bg-foreground text-background px-4 py-2 hover:bg-foreground/80 transition-all ml-2"
+                >
+                  Join
+                </Link>
+              )}
+            </>
+          )}
         </nav>
       </div>
     </header>

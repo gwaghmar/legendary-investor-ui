@@ -1,50 +1,67 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, X, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, X } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface WatchlistItem {
+    id?: string; // DB ID
     symbol: string;
     price: number;
     change: number;
-    aiSignal: 'BUY' | 'SELL' | 'HOLD';
+    aiSignal: 'BUY' | 'SELL' | 'HOLD' | 'ANALYZING';
     aiOneLiner: string;
 }
-
-// Mock data for demo - in real app, fetch from API
-const MOCK_DATA: Record<string, Partial<WatchlistItem>> = {
-    'NVDA': { price: 135.50, change: 2.5, aiSignal: 'BUY', aiOneLiner: 'Dominant moat in AI chips.' },
-    'TSLA': { price: 250.00, change: -1.2, aiSignal: 'SELL', aiOneLiner: 'Valuation disconnected from fundamentals.' },
-    'AAPL': { price: 230.10, change: 0.5, aiSignal: 'HOLD', aiOneLiner: 'Stable cash flow, low growth.' },
-    'PLTR': { price: 65.00, change: 4.2, aiSignal: 'BUY', aiOneLiner: 'Gov contracts expanding rapidly.' },
-};
 
 export function WatchlistView() {
     const [items, setItems] = useState<WatchlistItem[]>([]);
     const [input, setInput] = useState('');
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const handleAddItem = async () => {
-        const symbol = input.toUpperCase().trim();
-        if (!symbol) return;
-        if (items.find(i => i.symbol === symbol)) return; // No duplicates
+    const supabase = createClient();
 
-        // Initialize with loading state
-        const tempId = Date.now().toString();
-        setItems(prev => [...prev, {
-            symbol,
-            price: 0, // Placeholder
-            change: 0,
-            aiSignal: 'HOLD',
-            aiOneLiner: 'Loading AI Analysis...',
-        }]);
+    // 1. Load User & Watchlist
+    const loadItems = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
 
-        setInput('');
+        if (user) {
+            const { data } = await supabase
+                .from('watchlists')
+                .select('*')
+                .order('added_at', { ascending: false });
 
-        // Fetch Real AI Analysis
+            if (data) {
+                // Initial load: Symbols only, analysis comes later
+                const loadedItems: WatchlistItem[] = data.map((d: any) => ({
+                    id: d.id,
+                    symbol: d.symbol,
+                    price: 0,
+                    change: 0,
+                    aiSignal: 'ANALYZING',
+                    aiOneLiner: 'Queued for analysis...',
+                }));
+                setItems(loadedItems);
+
+                // Trigger batch analysis (simulated one-by-one for now)
+                loadedItems.forEach(item => analyzeItem(item.symbol));
+            }
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        loadItems();
+    }, [loadItems]);
+
+    // Helper to run analysis
+    const analyzeItem = async (symbol: string) => {
         try {
             const res = await fetch('/api/analyze', {
                 method: 'POST',
-                body: JSON.stringify({ symbol, price: 100 }), // Sending dummy price for now
+                body: JSON.stringify({ symbol, price: 0 }),
             });
             const data = await res.json();
 
@@ -52,31 +69,75 @@ export function WatchlistView() {
                 if (item.symbol === symbol) {
                     return {
                         ...item,
-                        price: 100 + (Math.random() * 10), // Still random price until I get a real API
-                        change: (Math.random() * 10) - 5,
-                        aiSignal: data.signal,
-                        aiOneLiner: data.oneLiner
+                        price: 100 + (Math.random() * 20), // Placeholder price
+                        change: (Math.random() * 5) * (Math.random() > 0.5 ? 1 : -1),
+                        aiSignal: data.signal || 'HOLD',
+                        aiOneLiner: data.oneLiner || 'Analysis complete.'
                     };
                 }
                 return item;
             }));
         } catch (e) {
             console.error(e);
-            setItems(prev => prev.map(item => {
-                if (item.symbol === symbol) {
-                    return { ...item, aiOneLiner: 'AI Failed to analyze.' };
-                }
-                return item;
-            }));
         }
     };
 
-    const handleRemove = (symbol: string) => {
-        setItems(prev => prev.filter(i => i.symbol !== symbol));
+    const handleAddItem = async () => {
+        const symbol = input.toUpperCase().trim();
+        if (!symbol) return;
+        if (items.find(i => i.symbol === symbol)) return; // No duplicates
+
+        const newItem: WatchlistItem = {
+            symbol,
+            price: 0,
+            change: 0,
+            aiSignal: 'ANALYZING',
+            aiOneLiner: 'Processing...',
+        };
+
+        // Optimistic UI update
+        setItems(prev => [newItem, ...prev]);
+        setInput('');
+
+        // Persist if logged in
+        if (user) {
+            const { data, error } = await supabase.from('watchlists').insert({
+                user_id: user.id,
+                symbol
+            }).select().single();
+
+            if (!error && data) {
+                // Update with real ID
+                setItems(prev => prev.map(i => i.symbol === symbol ? { ...i, id: data.id } : i));
+            }
+        }
+
+        // Trigger Analysis
+        analyzeItem(symbol);
     };
+
+    const handleRemove = async (symbol: string, id?: string) => {
+        // Optimistic remove
+        setItems(prev => prev.filter(i => i.symbol !== symbol));
+
+        if (user && id) {
+            await supabase.from('watchlists').delete().eq('id', id);
+        } else if (user) {
+            // Fallback if ID missing (shouldn't happen often)
+            await supabase.from('watchlists').delete().match({ user_id: user.id, symbol });
+        }
+    };
+
+    if (loading) return <div className="text-center py-12 text-muted-foreground animate-pulse">Syncing Watchlist...</div>;
 
     return (
         <div className="space-y-6">
+            {!user && (
+                <div className="bg-yellow-50/50 border border-yellow-200 p-3 rounded text-xs text-yellow-800 text-center">
+                    Note: Your watchlist is temporary. <a href="/login" className="underline font-bold">Sign In</a> to save it permanently.
+                </div>
+            )}
+
             <div className="flex gap-2">
                 <input
                     type="text"
@@ -102,7 +163,14 @@ export function WatchlistView() {
                 )}
 
                 {items.map((item) => (
-                    <div key={item.symbol} className="border-2 border-foreground p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-background group hover:translate-x-1 transition-transform">
+                    <div key={item.symbol} className="border-2 border-foreground p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-background group hover:translate-x-1 transition-transform relative">
+                        {/* Status Indicator */}
+                        {item.aiSignal === 'ANALYZING' && (
+                            <div className="absolute top-2 right-2 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                            </div>
+                        )}
 
                         {/* Left: Symbol & Price */}
                         <div className="flex items-center gap-4 min-w-[150px]">
@@ -124,13 +192,10 @@ export function WatchlistView() {
                         <div className="flex-1 border-l-2 border-foreground/10 pl-4 sm:pl-8">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`
-                  text-xs font-bold px-2 py-0.5 rounded text-white
-                  ${item.aiSignal === 'BUY' ? 'bg-green-600' : (item.aiSignal === 'SELL' ? 'bg-red-600' : 'bg-yellow-600')}
-                `}>
+                                  text-xs font-bold px-2 py-0.5 rounded text-white
+                                  ${item.aiSignal === 'BUY' ? 'bg-green-600' : (item.aiSignal === 'SELL' ? 'bg-red-600' : (item.aiSignal === 'ANALYZING' ? 'bg-gray-400' : 'bg-yellow-600'))}
+                                `}>
                                     AI {item.aiSignal}
-                                </span>
-                                <span className="text-xs text-muted-foreground font-mono">
-                                    Confidence: {(Math.random() * 40 + 60).toFixed(0)}%
                                 </span>
                             </div>
                             <p className="text-sm font-medium leading-tight">
@@ -140,7 +205,7 @@ export function WatchlistView() {
 
                         {/* Right: Actions */}
                         <button
-                            onClick={() => handleRemove(item.symbol)}
+                            onClick={() => handleRemove(item.symbol, item.id)}
                             className="p-2 hover:bg-red-100 text-red-600 transition-colors self-end sm:self-center"
                         >
                             <X className="w-5 h-5" />

@@ -21,7 +21,7 @@ export function DebateMessage({
   verdict,
 }: DebateMessageProps) {
   const legend = legendId === 'user'
-    ? { color: '#3B82F6', emoji: '👤', fullName: 'You' }
+    ? { color: '#3B82F6', avatar: '/avatars/user.png', fullName: 'You' }
     : legends[legendId];
 
   const [displayedText, setDisplayedText] = useState(animate ? '' : message);
@@ -65,7 +65,13 @@ export function DebateMessage({
         {/* Header with Legend name and Verdict */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{legend.emoji}</span>
+            <div className="w-8 h-8 rounded-full overflow-hidden border-2 flex-shrink-0" style={{ borderColor: legend.color }}>
+              {legendId === 'user' ? (
+                <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">U</div>
+              ) : (
+                <img src={legend.avatar} alt={legend.fullName} className="w-full h-full object-cover" />
+              )}
+            </div>
             <span className="font-bold text-sm" style={{ color: legendId === 'user' ? 'inherit' : legend.color }}>
               {legend.fullName}
             </span>
