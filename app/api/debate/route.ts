@@ -48,9 +48,10 @@ export async function POST(req: Request) {
         // FETCH REAL-TIME STOCK DATA
         let stockContext = '';
         try {
-            // Extract stock symbol from topic (e.g., "AAPL", "Apple stock", "$TSLA")
-            const symbolMatch = topic.match(/\$?([A-Z]{1,5})(?:\s|$)/i) ||
-                topic.match(/(?:stock|shares?|ticker)\s*:?\s*([A-Z]{1,5})/i);
+            // Extract stock symbol from topic or user message (e.g., "AAPL", "Apple stock", "$TSLA")
+            const searchSource = `${topic} ${userMessage || ''}`;
+            const symbolMatch = searchSource.match(/\$?([A-Z]{1,5})(?:\s|$)/i) ||
+                searchSource.match(/(?:stock|shares?|ticker)\s*:?\s*([A-Z]{1,5})/i);
 
             if (symbolMatch) {
                 const symbol = symbolMatch[1].toUpperCase();
@@ -89,21 +90,23 @@ export async function POST(req: Request) {
 
 TOPIC: "${topic}"
 ${userMessage ? `\nUSER ASKS: "${userMessage}"` : ''}
-${stockContext ? `\n📊 LIVE MARKET DATA (as of now!):\n${stockContext}` : ''}
-${ragContext ? `\nFACTUAL CONTEXT:\n${ragContext}` : ''}
+${stockContext ? `\n📊 LIVE MARKET DATA & NEWS (PRIORITY!):\n${stockContext}` : ''}
+${ragContext ? `\nSEC FILINGS & BALANCE SHEET CONTEXT:\n${ragContext}` : ''}
 
 RULES:
-1. Reply in 1-2 SHORT sentences max (under 150 characters!)
+1. Reply in 1-2 SHORT sentences max (under 180 characters!)
 2. Sound like YOU - use your personality and catchphrases
 3. Give your actual opinion (bullish/bearish/neutral) - be decisive!
-4. Reference the REAL numbers from live data if available (price, P/E, margins, etc.)
-5. NO links, NO URLs, NO sources, NO website mentions
-6. NO emojis at the start of sentences
-7. React to what the user asked if there's a question
-8. Be entertaining and memorable!
-9. NEVER mention "Legendary Investor", "website", "site", or any platform name
+4. CRITICAL: Use the LIVE numbers (price, P/E, margins, news) to justify your take.
+5. If news or balance sheet data is present, react to it - don't just use old knowledge.
+6. NO links, NO URLs, NO sources, NO website mentions
+7. NO emojis at the start of sentences
+8. React to what the user asked if there's a question
+9. Be entertaining and memorable!
+10. NEVER mention "Legendary Investor", "website", "site", or any platform name
 
 Just give your quick take. No intro, no "I think" - just say it.`;
+
 
         const messages: any[] = [
             { role: 'system', content: systemPrompt },

@@ -48,10 +48,21 @@ export interface CompanyMetrics {
     beta: number | null;
 }
 
+export interface CompanyNews {
+    id: number;
+    headline: string;
+    summary: string;
+    url: string;
+    datetime: number;
+    source: string;
+    category: string;
+}
+
 export interface StockDataBundle {
     quote: RealTimeQuote | null;
     profile: CompanyProfile | null;
     metrics: CompanyMetrics | null;
+    news: CompanyNews[];
     fetchedAt: string;
     error?: string;
 }
@@ -141,6 +152,27 @@ async function fetchMetrics(symbol: string): Promise<CompanyMetrics | null> {
     }
 }
 
+// Fetch company news
+async function fetchNews(symbol: string): Promise<CompanyNews[]> {
+    try {
+        const today = new Date();
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+
+        const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+        const res = await fetch(
+            `${BASE_URL}/company-news?symbol=${symbol}&from=${formatDate(oneMonthAgo)}&to=${formatDate(today)}&token=${FINNHUB_API_KEY}`
+        );
+        const data = await res.json();
+
+        return Array.isArray(data) ? data.slice(0, 5) : [];
+    } catch (error) {
+        console.error(`Finnhub news error for ${symbol}:`, error);
+        return [];
+    }
+}
+
 // Main function: Get all stock data for a symbol
 export async function getStockData(symbol: string): Promise<StockDataBundle> {
     const cleanSymbol = symbol.toUpperCase().trim();
@@ -150,22 +182,25 @@ export async function getStockData(symbol: string): Promise<StockDataBundle> {
             quote: null,
             profile: null,
             metrics: null,
+            news: [],
             fetchedAt: new Date().toISOString(),
             error: 'Finnhub API key not configured',
         };
     }
 
     // Fetch all data in parallel
-    const [quote, profile, metrics] = await Promise.all([
+    const [quote, profile, metrics, news] = await Promise.all([
         fetchQuote(cleanSymbol),
         fetchProfile(cleanSymbol),
         fetchMetrics(cleanSymbol),
+        fetchNews(cleanSymbol),
     ]);
 
     return {
         quote,
         profile,
         metrics,
+        news,
         fetchedAt: new Date().toISOString(),
         error: !quote && !profile ? `Could not find data for ${cleanSymbol}` : undefined,
     };
@@ -178,6 +213,7 @@ export function formatStockContext(data: StockDataBundle): string {
     }
 
     const parts: string[] = [];
+    const symbol = data.profile?.symbol || data.quote?.symbol || 'Unknown';
 
     // Company info
     if (data.profile) {
@@ -209,7 +245,16 @@ export function formatStockContext(data: StockDataBundle): string {
         if (m.beta) parts.push(`Beta: ${m.beta.toFixed(2)}`);
     }
 
-    parts.push(`Data as of: ${new Date(data.fetchedAt).toLocaleString()}`);
+    // Recent News
+    if (data.news && data.news.length > 0) {
+        parts.push(`\nLatest News for ${symbol}:`);
+        data.news.forEach((n, i) => {
+            parts.push(`${i + 1}. ${n.headline} (${new Date(n.datetime * 1000).toLocaleDateString()})`);
+        });
+    }
+
+    parts.push(`\nData as of: ${new Date(data.fetchedAt).toLocaleString()}`);
 
     return parts.join('\n');
 }
+
