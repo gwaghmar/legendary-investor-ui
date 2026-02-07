@@ -5,6 +5,7 @@ import { StockAutocomplete } from '@/components/stock-autocomplete';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import { ScanTemplates } from '@/components/scan-templates';
 
 interface ScreenerStock {
   symbol: string;
@@ -439,6 +440,17 @@ export default function ScreenerPage() {
               </button>
             )}
           </div>
+
+          <ScanTemplates
+            onSelect={(filters) => {
+              setMarketCapFilter(filters.marketCap);
+              setPeFilter(filters.pe);
+              setGrowthFilter(filters.growth);
+              setSectorFilter(filters.sector);
+              // Safe cast since we know our frameworks match
+              setSelectedFrameworks(filters.frameworks as Framework[]);
+            }}
+          />
 
           {/* Frameworks */}
           <div className="border-2 border-foreground p-4 mb-6">

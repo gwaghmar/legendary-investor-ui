@@ -46,6 +46,8 @@ export interface CompanyMetrics {
     week52High: number | null;
     week52Low: number | null;
     beta: number | null;
+    roic: number | null;
+    source: string;
 }
 
 export interface CompanyNews {
@@ -129,7 +131,7 @@ async function fetchMetrics(symbol: string): Promise<CompanyMetrics | null> {
 
         return {
             symbol,
-            peRatio: m.peBasicExclExtraTTM || m.peTTM || null,
+            peRatio: m.peIncludedExtraordinaryItemsTTM || m.peBasicExclExtraTTM || m.peTTM || null,
             pbRatio: m.pbQuarterly || m.pbAnnual || null,
             psRatio: m.psTTM || null,
             dividendYield: m.dividendYieldIndicatedAnnual || null,
@@ -145,6 +147,8 @@ async function fetchMetrics(symbol: string): Promise<CompanyMetrics | null> {
             week52High: m['52WeekHigh'] || null,
             week52Low: m['52WeekLow'] || null,
             beta: m.beta || null,
+            roic: m.roicTTM || calculateROIC(m) || null,
+            source: 'Finnhub',
         };
     } catch (error) {
         console.error(`Finnhub metrics error for ${symbol}:`, error);
@@ -152,8 +156,49 @@ async function fetchMetrics(symbol: string): Promise<CompanyMetrics | null> {
     }
 }
 
+function calculateROIC(m: any): number | null {
+    // Formula: NOPAT / Invested Capital
+    // NOPAT ≈ Operating Income * (1 - Tax Rate)
+    // Invested Capital ≈ Total Equity + Total Debt
+
+    // Per Share Approach:
+    // Operating Income/Share = Revenue/Share * Operating Margin
+    // Equity/Share = Book Value/Share
+    // Debt/Share = Book Value/Share * Debt/Equity Ratio
+
+    const revenuePerShare = m.revenuePerShareTTM;
+    const operatingMargin = m.operatingMarginTTM;
+    const bookValuePerShare = m.bookValuePerShareQuarterly;
+    const debtToEquity = m.totalDebtToEquityQuarterly;
+
+    if (!revenuePerShare || !operatingMargin || !bookValuePerShare) return null;
+
+    const taxRate = 0.21; // Estimate
+    const operatingIncomePerShare = revenuePerShare * (operatingMargin / 100);
+    const nopatPerShare = operatingIncomePerShare * (1 - taxRate);
+
+    const totalDebtPerShare = bookValuePerShare * (debtToEquity ? (debtToEquity / 100) : 0);
+    const investedCapitalPerShare = bookValuePerShare + totalDebtPerShare;
+
+    if (investedCapitalPerShare === 0) return null;
+
+    return (nopatPerShare / investedCapitalPerShare) * 100;
+}
+
+// Fetch stock peers
+export async function getStockPeers(symbol: string): Promise<string[]> {
+    try {
+        const res = await fetch(`${BASE_URL}/stock/peers?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error(`Finnhub peers error for ${symbol}:`, error);
+        return [];
+    }
+}
+
 // Fetch company news
-async function fetchNews(symbol: string): Promise<CompanyNews[]> {
+export async function fetchNews(symbol: string): Promise<CompanyNews[]> {
     try {
         const today = new Date();
         const oneMonthAgo = new Date();
@@ -173,6 +218,22 @@ async function fetchNews(symbol: string): Promise<CompanyNews[]> {
     }
 }
 
+// Fetch 13F filings / Institutional ownership
+export async function getStockFilings(symbol: string): Promise<any[]> {
+    try {
+        // Finnhub doesn't have a direct "13F visual timeline" endpoint in free, 
+        // so we fetch institutional ownership or filings and summarize.
+        const res = await fetch(`${BASE_URL}/stock/filings?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data.slice(0, 5) : [];
+    } catch (error) {
+        console.error(`Finnhub filings error for ${symbol}:`, error);
+        return [];
+    }
+}
+
+import { getAlphaVantageQuote, getAlphaVantageFundamentals } from './alpha-vantage';
+
 // Main function: Get all stock data for a symbol
 export async function getStockData(symbol: string): Promise<StockDataBundle> {
     const cleanSymbol = symbol.toUpperCase().trim();
@@ -189,12 +250,41 @@ export async function getStockData(symbol: string): Promise<StockDataBundle> {
     }
 
     // Fetch all data in parallel
-    const [quote, profile, metrics, news] = await Promise.all([
+    let [quote, profile, metrics, news] = await Promise.all([
         fetchQuote(cleanSymbol),
         fetchProfile(cleanSymbol),
         fetchMetrics(cleanSymbol),
         fetchNews(cleanSymbol),
     ]);
+
+    // Waterfall: Fallback to Alpha Vantage if essential data is missing
+    if (!quote || metrics?.peRatio === null || metrics?.roic === null) {
+        console.log(`Missing essential data for ${cleanSymbol}, attempting Alpha Vantage fallback...`);
+        const [avQuote, avMetrics] = await Promise.all([
+            getAlphaVantageQuote(cleanSymbol),
+            getAlphaVantageFundamentals(cleanSymbol)
+        ]);
+
+        if (avQuote) {
+            quote = {
+                symbol: cleanSymbol,
+                currentPrice: avQuote.price,
+                change: avQuote.change,
+                changePercent: avQuote.changePercent,
+                high: avQuote.price, // Fallback
+                low: avQuote.price, // Fallback
+                open: avQuote.price, // Fallback
+                previousClose: avQuote.price - avQuote.change,
+                timestamp: Date.now() / 1000,
+            };
+        }
+
+        if (avMetrics && metrics) {
+            metrics.peRatio = metrics.peRatio || avMetrics.pe;
+            metrics.roic = metrics.roic || avMetrics.roic;
+            metrics.source = 'Alpha Vantage (Fallback)';
+        }
+    }
 
     return {
         quote,

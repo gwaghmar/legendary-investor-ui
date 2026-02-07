@@ -10,6 +10,7 @@ interface DebateMessageProps {
   isLeft?: boolean;
   animate?: boolean;
   verdict?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  confidence?: number;
 }
 
 export function DebateMessage({
@@ -19,6 +20,7 @@ export function DebateMessage({
   isLeft = true,
   animate = false,
   verdict,
+  confidence,
 }: DebateMessageProps) {
   const legend = legendId === 'user'
     ? { color: '#3B82F6', avatar: '/avatars/user.png', fullName: 'You' }
@@ -78,7 +80,7 @@ export function DebateMessage({
           </div>
           {verdict && legendId !== 'user' && (
             <span className={`text-xs font-bold text-white px-2 py-0.5 rounded ${verdictColors[verdict]}`}>
-              {verdict}
+              {verdict} {confidence ? `(${confidence}%)` : ''}
             </span>
           )}
         </div>

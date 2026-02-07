@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     try {
         const { topic, activeLegend, previousMessages, userMessage } = await req.json();
 
-        // Fun personality prompts - short and punchy!
+        // Fun personality prompts
         const PERSONALITIES: Record<string, string> = {
             'buffett': `You are Warren Buffett. Folksy midwestern grandpa vibes. Love value investing, hate crypto. Use simple metaphors. Say things like "Be fearful when others are greedy." Keep it warm but wise.`,
             'munger': `You are Charlie Munger. Brutally honest curmudgeon. One-liners that sting. Hate stupidity, love mental models. Say things like "I have nothing to add" or call things "idiotic." Short and savage.`,
@@ -48,7 +48,6 @@ export async function POST(req: Request) {
         // FETCH REAL-TIME STOCK DATA
         let stockContext = '';
         try {
-            // Extract stock symbol from topic or user message (e.g., "AAPL", "Apple stock", "$TSLA")
             const searchSource = `${topic} ${userMessage || ''}`;
             const symbolMatch = searchSource.match(/\$?([A-Z]{1,5})(?:\s|$)/i) ||
                 searchSource.match(/(?:stock|shares?|ticker)\s*:?\s*([A-Z]{1,5})/i);
@@ -66,7 +65,6 @@ export async function POST(req: Request) {
         let ragContext = '';
         try {
             const index = await getPineconeIndex();
-            // Search for context using user message + topic
             const queryVector = generateSimpleEmbedding(topic + ' ' + (userMessage || ''));
             const searchResults = await index.query({
                 vector: queryVector,
@@ -78,14 +76,12 @@ export async function POST(req: Request) {
                 const docs = searchResults.matches.map(match =>
                     `SOURCE (${(match.metadata as any)?.filingType} - ${(match.metadata as any)?.filingDate}):\n${(match.metadata as any)?.content}`
                 );
-                ragContext = docs.join('\n\n').slice(0, 1500); // Limit context length
+                ragContext = docs.join('\n\n').slice(0, 1500);
             }
         } catch (e) {
             console.warn('RAG search failed:', e);
-            // Continue without RAG if Pinecone fails (e.g. invalid key)
         }
 
-        // Simple, effective prompt with LIVE STOCK DATA + RAG context
         const systemPrompt = `${persona}
 
 TOPIC: "${topic}"
@@ -94,25 +90,26 @@ ${stockContext ? `\n📊 LIVE MARKET DATA & NEWS (PRIORITY!):\n${stockContext}` 
 ${ragContext ? `\nSEC FILINGS & BALANCE SHEET CONTEXT:\n${ragContext}` : ''}
 
 RULES:
-1. Reply in 1-2 SHORT sentences max (under 180 characters!)
-2. Sound like YOU - use your personality and catchphrases
-3. Give your actual opinion (bullish/bearish/neutral) - be decisive!
-4. CRITICAL: Use the LIVE numbers (price, P/E, margins, news) to justify your take.
-5. If news or balance sheet data is present, react to it - don't just use old knowledge.
-6. NO links, NO URLs, NO sources, NO website mentions
-7. NO emojis at the start of sentences
-8. React to what the user asked if there's a question
-9. Be entertaining and memorable!
-10. NEVER mention "Legendary Investor", "website", "site", or any platform name
+1. You represent specific legendary investors. Be decisive.
+2. CRITICAL: Use the LIVE numbers provided to justify your take.
+3. If news or balance sheet data is present, react to it.
+4. Output MUST be valid JSON only.
 
-Just give your quick take. No intro, no "I think" - just say it.`;
+JSON STRUCTURE:
+{
+  "content": "Your message here (max 2 sentences, succinct, in character). Use (Source: X) for numbers.",
+  "verdict": "BULLISH" | "BEARISH" | "NEUTRAL",
+  "confidence": number (0-100),
+  "citations": ["List specific sources used, e.g. 'Finnhub', '10-K'"]
+}
+
+Do not output markdown code blocks. Just the raw JSON.`;
 
 
         const messages: any[] = [
             { role: 'system', content: systemPrompt },
         ];
 
-        // Add last few messages for context
         if (previousMessages && previousMessages.length > 0) {
             messages.push(...previousMessages.slice(-3));
         }
@@ -132,8 +129,9 @@ Just give your quick take. No intro, no "I think" - just say it.`;
             body: JSON.stringify({
                 model: 'google/gemini-2.0-flash-001',
                 messages,
-                temperature: 0.9, // More creative/fun
-                max_tokens: 150, // Keep it SHORT
+                temperature: 0.7,
+                max_tokens: 250,
+                response_format: { type: "json_object" }
             }),
         });
 
@@ -145,29 +143,30 @@ Just give your quick take. No intro, no "I think" - just say it.`;
 
         const rawContent = data.choices[0].message.content;
 
-        // Clean any website/URL mentions that slip through
-        const content = rawContent
-            .replace(/legendary\s*investor/gi, '')
-            .replace(/https?:\/\/[^\s]+/gi, '')
-            .replace(/www\.[^\s]+/gi, '')
-            .replace(/\bwebsite\b/gi, '')
-            .replace(/\bsite\b/gi, '')
-            .replace(/localhost:[0-9]+/gi, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-
-        // Simple verdict detection
-        let verdict: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-        const lower = content.toLowerCase();
-        if (lower.includes('buy') || lower.includes('bullish') || lower.includes('love') || lower.includes('great')) {
-            verdict = 'BULLISH';
-        } else if (lower.includes('sell') || lower.includes('bearish') || lower.includes('avoid') || lower.includes('hate') || lower.includes('crash')) {
-            verdict = 'BEARISH';
+        // Parse JSON
+        let parsed;
+        try {
+            const cleanJson = rawContent.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+            parsed = JSON.parse(cleanJson);
+        } catch (e) {
+            console.error("Failed to parse debate JSON", rawContent);
+            parsed = {
+                content: rawContent,
+                verdict: 'NEUTRAL',
+                confidence: 50,
+                citations: []
+            };
         }
 
+        // Fallback checks
+        if (!parsed.citations) parsed.citations = [];
+        if (!parsed.confidence) parsed.confidence = 50;
+
         return NextResponse.json({
-            content,
-            verdict,
+            content: parsed.content,
+            verdict: parsed.verdict,
+            confidence: parsed.confidence,
+            citations: parsed.citations,
             legend: activeLegend
         });
 

@@ -226,8 +226,17 @@ export function DebateBox() {
           </div>
 
           {isGeneratingInitial && messages.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">
-              <div className="animate-pulse">Generating legend perspectives...</div>
+            <div className="space-y-4 p-4 animate-pulse">
+              {/* Skeleton Messages */}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className={`flex gap-3 ${i % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
+                  <div className="w-8 h-8 rounded-full bg-foreground/20 flex-shrink-0" />
+                  <div className={`flex-1 space-y-2 py-3 px-4 rounded-xl ${i % 2 === 0 ? 'bg-secondary/30 rounded-tl-none' : 'bg-primary/10 rounded-tr-none'}`}>
+                    <div className="h-4 bg-foreground/10 rounded w-3/4" />
+                    <div className="h-4 bg-foreground/10 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -246,6 +255,7 @@ export function DebateBox() {
                   isLeft={index % 2 === 0}
                   animate={false}
                   verdict={msg.verdict}
+                  confidence={msg.confidence}
                 />
               </motion.div>
             ))}

@@ -20,6 +20,8 @@ export interface StockData {
   tangibleBook: number;
   magicScore: number;
   buffettScore: number;
+  lastUpdated?: string;
+  source?: string;
 }
 
 export interface LegendAnalysis {
@@ -141,9 +143,53 @@ export const stockDatabase: Record<string, StockData> = {
   },
 };
 
-export function getLegendAnalyses(symbol: string): LegendAnalysis[] {
-  const stock = stockDatabase[symbol];
-  if (!stock) return [];
+import { type StockDataBundle } from './finnhub';
+
+export function mapFinnhubToStockData(data: StockDataBundle): StockData | null {
+  if (!data.profile || !data.quote || !data.metrics) return null;
+
+  const { profile, quote, metrics } = data;
+
+  // Calculate Scores
+  const roic = metrics.roic || 0;
+  const earningsYield = metrics.peRatio ? (100 / metrics.peRatio) : 0;
+  const magicScore = Math.min(100, Math.max(0, Math.round((roic + earningsYield) * 2))); // Rough approximation
+
+  // Buffett Score: Quality + Moat
+  const grossMarginScore = (metrics.grossMargin || 0) > 40 ? 30 : 0;
+  const roicScore = roic > 15 ? 30 : 0;
+  const debtScore = (metrics.debtToEquity || 1) < 0.5 ? 20 : 0;
+  const growthScore = (metrics.revenueGrowth || 0) > 10 ? 20 : 0;
+  const buffettScore = grossMarginScore + roicScore + debtScore + growthScore;
+
+  return {
+    symbol: profile.symbol,
+    name: profile.name,
+    exchange: profile.exchange,
+    sector: profile.industry || 'Unknown',
+    price: quote.currentPrice,
+    change: quote.change,
+    changePercent: quote.changePercent,
+    pe: metrics.peRatio || 0,
+    forwardPe: 0, // Not always available in basic metrics, use 0 or fetch separately
+    revenueGrowth: metrics.revenueGrowth || 0,
+    grossMargin: metrics.grossMargin || 0,
+    roic: parseFloat(roic.toFixed(2)),
+    debtEquity: metrics.debtToEquity || 0,
+    freeCashFlow: 'N/A', // Finnhub basic metrics don't give FCF directly
+    shortInterest: 0, // Not in basic metrics
+    insiderBuying: false, // Placeholder
+    tangibleBook: 0, // Placeholder
+    magicScore,
+    buffettScore,
+    lastUpdated: data.fetchedAt || new Date().toISOString(),
+    source: 'Finnhub',
+  };
+}
+
+export function getLegendAnalyses(stock: StockData): LegendAnalysis[] {
+  const symbol = stock.symbol;
+
 
   const isMicron = symbol === 'MU';
   const isHighGrowth = stock.revenueGrowth > 50;
