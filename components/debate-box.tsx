@@ -96,8 +96,14 @@ export function DebateBox() {
 
         if (!response.ok) {
           console.error(`Debate API failed with status ${response.status}`);
-          const errorData = await response.json();
-          setError(errorData.error || `API request failed with status ${response.status}`);
+          let errorMessage = `API request failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // Response was not JSON, use default message
+          }
+          setError(errorMessage);
           continue; // Skip this legend and try next
         }
 
@@ -163,8 +169,14 @@ export function DebateBox() {
 
       if (!response.ok) {
         console.error(`Debate API failed with status ${response.status}`);
-        const errorData = await response.json();
-        setError(errorData.error || `API request failed with status ${response.status}`);
+        let errorMessage = `API request failed with status ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response was not JSON, use default message
+        }
+        setError(errorMessage);
         return null;
       }
 
@@ -257,7 +269,11 @@ export function DebateBox() {
 
           {/* Error Display */}
           {error && (
-            <div className="p-4 bg-red-100 border-2 border-red-500 text-red-700 rounded mb-4">
+            <div 
+              className="p-4 bg-red-100 border-2 border-red-500 text-red-700 rounded mb-4"
+              role="alert"
+              aria-live="assertive"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <strong className="font-bold">Error:</strong> {error}
@@ -265,6 +281,7 @@ export function DebateBox() {
                 <button 
                   onClick={() => setError(null)}
                   className="text-red-700 hover:text-red-900 font-bold text-sm px-2 py-1 border border-red-500 rounded hover:bg-red-200"
+                  aria-label="Dismiss error message"
                 >
                   Dismiss
                 </button>
