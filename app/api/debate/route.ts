@@ -26,11 +26,16 @@ function generateSimpleEmbedding(text: string): number[] {
 
 export async function POST(req: Request) {
     if (!OPENROUTER_API_KEY) {
-        return NextResponse.json({ error: 'OpenRouter API Key missing' }, { status: 500 });
+        return NextResponse.json({ 
+            error: 'OpenRouter API Key missing. Please add OPENROUTER_API_KEY to environment variables.' 
+        }, { status: 500 });
     }
 
     try {
         const { topic, activeLegend, previousMessages, userMessage } = await req.json();
+
+        // Add logging for debugging
+        console.log('Debate API called with:', { topic, activeLegend, hasUserMessage: !!userMessage });
 
         // Fun personality prompts
         const PERSONALITIES: Record<string, string> = {
@@ -135,10 +140,19 @@ Do not output markdown code blocks. Just the raw JSON.`;
             }),
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('OpenRouter API failed:', response.status, errorText);
+            return NextResponse.json({ 
+                error: `OpenRouter API failed: ${response.status}` 
+            }, { status: response.status });
+        }
+
         const data = await response.json();
 
         if (data.error) {
-            throw new Error(data.error.message);
+            console.error('OpenRouter returned error:', data.error);
+            throw new Error(`OpenRouter: ${data.error.message || JSON.stringify(data.error)}`);
         }
 
         const rawContent = data.choices[0].message.content;

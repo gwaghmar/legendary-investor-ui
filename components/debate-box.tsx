@@ -41,6 +41,7 @@ export function DebateBox() {
   const [activeLegend, setActiveLegend] = useState<LegendId | null>(null);
   const [isGeneratingInitial, setIsGeneratingInitial] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
 
@@ -71,6 +72,7 @@ export function DebateBox() {
   const generateInitialResponses = useCallback(async (topic: NewsTopic) => {
     setIsGeneratingInitial(true);
     setMessages([]);
+    setError(null);
 
     // Pick 3 random legends to respond
     const legendKeys = Object.keys(legends) as LegendId[];
@@ -92,7 +94,26 @@ export function DebateBox() {
           }),
         });
 
+        if (!response.ok) {
+          console.error(`Debate API failed with status ${response.status}`);
+          let errorMessage = `API request failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // Response was not JSON, use default message
+          }
+          setError(errorMessage);
+          continue; // Skip this legend and try next
+        }
+
         const data = await response.json();
+
+        if (data.error) {
+          console.error('Debate API returned error:', data.error);
+          setError(data.error);
+          continue;
+        }
 
         if (data.content || data.message) {
           setMessages(prev => [
@@ -108,6 +129,7 @@ export function DebateBox() {
         }
       } catch (error) {
         console.error('Failed to generate response:', error);
+        setError(error instanceof Error ? error.message : 'Failed to generate response');
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -145,9 +167,27 @@ export function DebateBox() {
         }),
       });
 
+      if (!response.ok) {
+        console.error(`Debate API failed with status ${response.status}`);
+        let errorMessage = `API request failed with status ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response was not JSON, use default message
+        }
+        setError(errorMessage);
+        return null;
+      }
+
       const data = await response.json();
 
-      setTypingLegend(null);
+      if (data.error) {
+        console.error('Debate API returned error:', data.error);
+        setError(data.error);
+        return null;
+      }
+
       if (data.content) {
         setMessages(prev => [
           ...prev,
@@ -173,6 +213,8 @@ export function DebateBox() {
       }
     } catch (error) {
       console.error("Failed to fetch debate message", error);
+      setError(error instanceof Error ? error.message : 'Failed to generate response');
+    } finally {
       setTypingLegend(null);
     }
     return null;
@@ -224,6 +266,28 @@ export function DebateBox() {
               <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{currentTopic.summary}</p>
             )}
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div 
+              className="p-4 bg-red-100 border-2 border-red-500 text-red-700 rounded mb-4"
+              role="alert"
+              aria-live="assertive"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <strong className="font-bold">Error:</strong> {error}
+                </div>
+                <button 
+                  onClick={() => setError(null)}
+                  className="text-red-700 hover:text-red-900 font-bold text-sm px-2 py-1 border border-red-500 rounded hover:bg-red-200"
+                  aria-label="Dismiss error message"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
 
           {isGeneratingInitial && messages.length === 0 && (
             <div className="space-y-4 p-4 animate-pulse">
